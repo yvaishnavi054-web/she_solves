@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { locales } from '../lib/locales';
 import { businessData } from '../lib/businessData';
 import { api } from '../lib/api';
+import { speechService } from '../lib/speechService';
 
 export type Language = 'en' | 'hi' | 'mr';
 
@@ -26,6 +27,9 @@ export interface FinancialSummary {
   todayIncome: number;
   todayExpenses: number;
   todayProfit: number;
+  thisWeekIncome: number;
+  thisWeekExpenses: number;
+  thisWeekProfit: number;
   thisMonthIncome: number;
   thisMonthExpenses: number;
   thisMonthProfit: number;
@@ -64,6 +68,9 @@ export interface AppContextType {
   setIsDemoMode: (val: boolean) => void;
   financialSummary: FinancialSummary;
   speakText: (text: string, langOverride?: Language) => void;
+  pauseSpeech: () => void;
+  resumeSpeech: () => void;
+  stopSpeech: () => void;
   updateBusinessType: (type: string) => void;
 }
 
@@ -446,8 +453,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   let totalExpenses = 0;
   let todayIncome = 0;
   let todayExpenses = 0;
+  let thisWeekIncome = 0;
+  let thisWeekExpenses = 0;
   let thisMonthIncome = 0;
   let thisMonthExpenses = 0;
+
+  const nowTime = new Date();
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const weekStart = new Date(nowTime.getTime() - 6 * MS_PER_DAY);
+  weekStart.setHours(0, 0, 0, 0);
 
   const activeDatesSet = new Set<string>();
   const categoryTotals: Record<string, number> = {};
@@ -457,7 +471,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const amt = Number(t.amount) || 0;
     const isSale = t.type?.toLowerCase() === 'sale' || t.type?.toLowerCase() === 'income';
     const tDate = t.date ? t.date.slice(0, 10) : localToday;
-    const dateObj = new Date(tDate);
+    const dateObj = new Date(tDate + 'T00:00:00');
 
     // Track active days
     activeDatesSet.add(tDate);
@@ -475,6 +489,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (tDate === localToday || tDate === utcToday) {
       if (isSale) todayIncome += amt;
       else todayExpenses += amt;
+    }
+
+    // This Week (last 7 rolling days)
+    if (dateObj >= weekStart && dateObj <= nowTime) {
+      if (isSale) thisWeekIncome += amt;
+      else thisWeekExpenses += amt;
     }
 
     // This Month
@@ -499,6 +519,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const netProfit = totalIncome - totalExpenses;
   const profitMarginPercent = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 1000) / 10 : 0;
   const todayProfit = todayIncome - todayExpenses;
+  const thisWeekProfit = thisWeekIncome - thisWeekExpenses;
   const thisMonthProfit = thisMonthIncome - thisMonthExpenses;
 
   // Monthly breakdown array (sorted chronologically)
@@ -529,6 +550,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     todayIncome: Math.round(todayIncome),
     todayExpenses: Math.round(todayExpenses),
     todayProfit: Math.round(todayProfit),
+    thisWeekIncome: Math.round(thisWeekIncome),
+    thisWeekExpenses: Math.round(thisWeekExpenses),
+    thisWeekProfit: Math.round(thisWeekProfit),
     thisMonthIncome: Math.round(thisMonthIncome),
     thisMonthExpenses: Math.round(thisMonthExpenses),
     thisMonthProfit: Math.round(thisMonthProfit),
@@ -539,22 +563,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     categoryBreakdown
   };
 
-  // 4. Web Speech Synthesis Audio Assistant
+  // 4. Web Speech Synthesis Audio Assistant via Universal SpeechService
   const speakText = (text: string, langOverride?: Language) => {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      const targetLang = langOverride || language;
-      if (targetLang === 'mr') utterance.lang = 'mr-IN';
-      else if (targetLang === 'hi') utterance.lang = 'hi-IN';
-      else utterance.lang = 'en-IN';
-      utterance.rate = 0.95;
-      window.speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn("Speech synthesis error", e);
-    }
+    speechService.speak(text, (langOverride || language) as 'mr' | 'hi' | 'en');
   };
+
+  const pauseSpeech = () => speechService.pause();
+  const resumeSpeech = () => speechService.resume();
+  const stopSpeech = () => speechService.stop();
 
   return (
     <AppContext.Provider value={{
@@ -577,6 +593,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsDemoMode,
       financialSummary,
       speakText,
+      pauseSpeech,
+      resumeSpeech,
+      stopSpeech,
       updateBusinessType
     }}>
       {children}

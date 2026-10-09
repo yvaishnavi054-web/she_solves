@@ -251,3 +251,87 @@ def rule_based_extract(text: str) -> List[Dict[str, Any]]:
             })
 
     return txns
+
+def parse_udhaar_speech(text: str) -> Optional[Dict[str, Any]]:
+    """
+    Parses voice-based customer credit (Udhaar) transactions.
+    Supports Hindi, Marathi, and English phrases like:
+    - 'सुनीताला ४०० रुपये उधार दिले' / 'Sunita ko 400 udhaar diye' (credit)
+    - 'सुनीताने ४०० रुपये परत दिले' / 'Sunita ne 400 wapas diye' (repayment)
+    - 'Anita gave 500 repayment' / 'Gave 300 credit to Ramesh'
+    """
+    if not text or not text.strip():
+        return None
+
+    today_str = datetime.date.today().isoformat()
+    norm = normalize_speech_text(text)
+
+    # 1. Detect relative dates
+    date_val = today_str
+    if re.search(r'(?:^|\s)(?:yesterday|काल|कल)(?:\s|[.,!?।]|$)', norm):
+        date_val = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    elif re.search(r'(?:^|\s)(?:parso|परवा|परसों)(?:\s|[.,!?।]|$)', norm):
+        date_val = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
+
+    # 2. Extract Amount
+    amt_match = re.search(rf'(\d+(?:\.\d+)?)\s*{CURRENCY_REGEX}?', norm)
+    if not amt_match:
+        # Check any number
+        nums = re.findall(r'\d+(?:\.\d+)?', norm)
+        if nums:
+            amt = float(nums[0])
+        else:
+            return None
+    else:
+        amt = float(amt_match.group(1))
+
+    # 3. Detect Transaction Type (Credit Given vs Repayment / Payment Received)
+    # Repayment cues: परत, वापस, जमा, फेडले, repaid, returned, payment, back, de diye
+    is_payment = bool(re.search(r'(?:परत|वापस|जमा|फेडले|दिले|दिये|repaid|returned|payment|received|wapas|parat|jama)', norm)) and not bool(re.search(r'(?:उधार\s*दिले|उधार\s*दिए|credit\s*given|उधारी\s*दिली)', norm))
+    if re.search(r'(?:ने\s*\d+.*(?:दिले|दिए|जमा)|paid\s*back|gave\s*back|वापस\s*किए|वापस\s*दि|परत\s*केले)', norm):
+        is_payment = True
+
+    # 4. Extract Customer Name
+    stopwords = {'काल', 'आज', 'परवा', 'उधार', 'उधारी', 'रुपये', 'रुपया', 'रुपयांचा', 'रुपयांची', 'rupees', 'rs', 'udhaar', 'credit', 'payment', 'diye', 'vikle', 'दिले', 'दिए', 'परत', 'वापस', 'जमा', 'wapas', 'parat', 'jama', 'yesterday', 'today'}
+    raw_name = ""
+    # Look for name before postposition first: "Sunita ko", "सुनीताला", "सुनीताने"
+    m_name_pre = re.search(r'([a-zA-Z\u0900-\u097f]+?)(?:ला|ने|को|कडून|से|\s+ko|\s+la|\s+ne)\b', text, re.IGNORECASE)
+    if m_name_pre:
+        cand = m_name_pre.group(1).strip()
+        if cand.lower() not in stopwords and not re.search(r'[\d०-९]', cand) and len(cand) >= 2:
+            raw_name = cand
+
+    if not raw_name:
+        name_patterns = [
+            r'([a-zA-Z\u0900-\u097f]+)\s*(?:ko|la|ne|ने|ला|को|कडून|से)',
+            r'(?:to|ko|la|ने|ला|को)\s*([a-zA-Z\u0900-\u097f]+)',
+            r'(?:उधार|credit|repayment)\s*(?:to|for)?\s*([a-zA-Z\u0900-\u097f]+)',
+            r'(?:from|कडून|से)\s*([a-zA-Z\u0900-\u097f]+)'
+        ]
+        for pat in name_patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                cand = m.group(1).strip()
+                if cand.lower() not in stopwords and not re.search(r'[\d०-९]', cand) and len(cand) >= 2:
+                    raw_name = cand
+                    break
+
+    if not raw_name:
+        words = [w for w in text.split() if w.lower() not in stopwords and not re.search(r'[\d०-९]', w)]
+        if words:
+            raw_name = words[0].strip()
+        else:
+            raw_name = "ग्राहक (Customer)"
+
+    # Clean name (remove trailing postpositions like ने, ला, को, etc.)
+    clean_name = re.sub(r'(?:ला|ने|को|जी|ताई|भाऊ)$', '', raw_name).strip()
+    if not clean_name:
+        clean_name = raw_name
+
+    return {
+        "customer_name": clean_name,
+        "amount": amt,
+        "type": "payment" if is_payment else "credit",
+        "date": date_val,
+        "raw_transcript": text
+    }

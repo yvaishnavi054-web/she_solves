@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AppProvider, useAppContext, Language } from './context/AppContext';
-import { Home, Mic, BookOpen, PieChart, ShieldCheck, FileText, Globe, LogOut, Sparkles, Building2, Users } from 'lucide-react';
+import { Home, Mic, BookOpen, PieChart, ShieldCheck, FileText, Globe, LogOut, Sparkles, Building2, Users, Volume2, Bot } from 'lucide-react';
+import { GlobalAudioBar } from './components/GlobalAudioBar';
+import { AskKhataAI } from './components/AskKhataAI';
+
 
 // Pages
 import Landing from './pages/Landing';
@@ -45,9 +48,13 @@ const LanguageSelector: React.FC<{ compact?: boolean }> = ({ compact }) => {
 };
 
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { loc, language, setLanguage, user, logout, isDemoMode } = useAppContext();
+  const { 
+    loc, language, setLanguage, user, logout, isDemoMode, 
+    transactions, financialSummary, speakText 
+  } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -151,6 +158,78 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Universal Page Audio Listen Button */}
+            <button
+              onClick={() => {
+                const currentPath = location.pathname;
+                let pageText = '';
+                if (currentPath.includes('/voice')) {
+                  pageText = language === 'mr'
+                    ? "आवाज खाता पान. येथे तुम्ही बोलून तुमचा दिवसभराचा व्यवहार नोंदवू शकता."
+                    : language === 'hi'
+                    ? "वॉइस खाता पेज। यहां आप बोलकर दिनभर के लेन-देन दर्ज कर सकते हैं।"
+                    : "Voice Khata page. Tap the microphone and speak your daily sales and expenses.";
+                } else if (currentPath.includes('/ledger')) {
+                  const saleTotal = transactions.filter(t => t.type === 'sale').reduce((s, t) => s + t.amount, 0);
+                  const expTotal = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+                  pageText = language === 'mr'
+                    ? `व्यवहार नोंदवही. एकूण विक्री ₹${saleTotal}, आणि एकूण खर्च ₹${expTotal}. एकूण ${transactions.length} नोंदी आहेत.`
+                    : language === 'hi'
+                    ? `खाता बही पेज। कुल बिक्री ₹${saleTotal}, और कुल खर्च ₹${expTotal}। कुल ${transactions.length} लेन-देन दर्ज हैं।`
+                    : `Business Ledger. Total sales ₹${saleTotal}, total expenses ₹${expTotal}. Total ${transactions.length} records.`;
+                } else if (currentPath.includes('/udhaar')) {
+                  pageText = language === 'mr'
+                    ? "उधार खाते पान. येथे तुम्ही ग्राहकांची उधारी आणि प्रलंबित वसुली पाहू शकता."
+                    : language === 'hi'
+                    ? "उधार खाता पेज। यहां आप ग्राहकों की बकाया उधारी और भुगतान देख सकते हैं।"
+                    : "Customer Credit Ledger. Review customer balances and collect pending payments.";
+                } else if (currentPath.includes('/insights')) {
+                  pageText = language === 'mr'
+                    ? `व्यवसाय विश्लेषण पान. निव्वळ नफा ₹${financialSummary.netProfit}, नफा मार्जिन ${financialSummary.profitMarginPercent} टक्के आहे.`
+                    : language === 'hi'
+                    ? `बिजनेस इनसाइट्स पेज। शुद्ध लाभ ₹${financialSummary.netProfit}, और प्रॉफिट मार्जिन ${financialSummary.profitMarginPercent} प्रतिशत है।`
+                    : `Business Insights page. Net profit is ₹${financialSummary.netProfit}, with a ${financialSummary.profitMarginPercent}% margin.`;
+                } else if (currentPath.includes('/readiness')) {
+                  pageText = language === 'mr'
+                    ? "बँक पत पात्रता पान. येथून तुम्ही मुद्रा कर्जासाठी ३ महिन्यांचे बँक स्टेटमेंट डाउनलोड करू शकता."
+                    : language === 'hi'
+                    ? "बैंक लोन पात्रता पेज। यहां से आप मुद्रा लोन के लिए 3 महीने का बैंक स्टेटमेंट डाउनलोड कर सकते हैं।"
+                    : "Credit Readiness page. Download your 3-month bank-ready financial statement for loan applications.";
+                } else if (currentPath.includes('/schemes')) {
+                  pageText = language === 'mr'
+                    ? "सरकारी योजना दालन. येथे मुद्रा आणि इतर सरकारी व्यवसाय कर्जांची माहिती उपलब्ध आहे."
+                    : language === 'hi'
+                    ? "सरकारी योजनाएं। यहां मुद्रा और अन्य बिजनेस लोन योजनाओं की जानकारी उपलब्ध है।"
+                    : "Government Schemes directory. Explore MUDRA, Stand-Up India, and MSME loan schemes.";
+                } else {
+                  // Default Dashboard
+                  pageText = language === 'mr'
+                    ? `आजचे उत्पन्न ₹${financialSummary.todayIncome}, आजचा खर्च ₹${financialSummary.todayExpenses}, आणि नफा ₹${financialSummary.todayProfit}. चालू महिन्याचे उत्पन्न ₹${financialSummary.thisMonthIncome} आहे.`
+                    : language === 'hi'
+                    ? `आज की कुल आय ₹${financialSummary.todayIncome}, आज का खर्च ₹${financialSummary.todayExpenses}, और लाभ ₹${financialSummary.todayProfit} है। चालू महीने की आय ₹${financialSummary.thisMonthIncome} है।`
+                    : `Today's income is ₹${financialSummary.todayIncome}, expenses are ₹${financialSummary.todayExpenses}, and net profit is ₹${financialSummary.todayProfit}. This month's total income is ₹${financialSummary.thisMonthIncome}.`;
+                }
+                speakText(pageText);
+              }}
+              className="flex items-center gap-1.5 bg-accent-50 hover:bg-accent-100 text-brand-900 border border-accent-200/80 px-2.5 py-1.5 rounded-xl font-bold text-xs transition active:scale-95 shadow-2xs cursor-pointer"
+              title={language === 'mr' ? 'ऐकून घ्या' : language === 'hi' ? 'पेज सारांश सुनें' : 'Listen Page Summary'}
+            >
+              <Volume2 size={15} className="text-accent-600 shrink-0" />
+              <span className="font-bold">
+                {language === 'mr' ? 'ऐकून घ्या' : language === 'hi' ? 'सुनें' : 'Listen'}
+              </span>
+            </button>
+
+            {/* Ask Khata AI Chatbot Launcher Button */}
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-3 py-1.5 rounded-xl font-black text-xs transition active:scale-95 shadow-sm cursor-pointer"
+              title={language === 'mr' ? 'AI सहाय्यकाला विचारा' : language === 'hi' ? 'AI सहायक से पूछें' : 'Ask Khata AI'}
+            >
+              <Sparkles size={14} className="text-white animate-pulse" />
+              <span>{language === 'mr' ? 'Ask AI' : language === 'hi' ? 'Ask AI' : 'Ask AI'}</span>
+            </button>
+
             {/* Language Selector */}
             <LanguageSelector compact />
 
@@ -165,12 +244,32 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </header>
 
+        {/* Floating Global Audio Player Bar */}
+        <GlobalAudioBar />
+
         {/* Scrollable Page Content */}
         <main className="flex-1 overflow-y-auto relative pb-24 md:pb-8 scroll-smooth bg-surface-50">
           <div className="max-w-5xl mx-auto h-full">
             {children}
           </div>
         </main>
+
+        {/* Floating AI Assistant Trigger Button */}
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-20 md:bottom-8 right-5 z-40 bg-brand-900 hover:bg-brand-850 text-white p-3.5 rounded-full shadow-2xl flex items-center gap-2 border-2 border-accent-400 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+          title="Ask Khata AI (स्मार्ट आवाज सहाय्यक)"
+        >
+          <div className="relative">
+            <Bot size={22} className="text-accent-400 group-hover:rotate-12 transition-transform" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent-400 rounded-full animate-ping" />
+          </div>
+          <span className="text-xs font-black pr-1 hidden sm:inline">Ask AI</span>
+        </button>
+
+        {/* Multilingual Voice Chatbot Drawer */}
+        <AskKhataAI isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+
 
         {/* Mobile Bottom Navigation */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 pb-safe shadow-lg z-30">

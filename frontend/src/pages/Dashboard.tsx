@@ -9,6 +9,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { CreditJourneyStepper } from '../components/CreditJourneyStepper';
 import { businessData } from '../lib/businessData';
+import { AudioSpeakerButton } from '../components/AudioSpeakerButton';
+import { generateDynamicAlerts, FinancialAlert } from '../lib/alertEngine';
+import { UdhaarEntry } from './UdhaarKhata';
 
 export default function Dashboard() {
   const { 
@@ -40,6 +43,9 @@ export default function Dashboard() {
     todayIncome,
     todayExpenses,
     todayProfit,
+    thisWeekIncome,
+    thisWeekExpenses,
+    thisWeekProfit,
     thisMonthIncome,
     thisMonthExpenses,
     thisMonthProfit,
@@ -335,36 +341,39 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* BUSINESS TRADE SELECTOR */}
-      <div className="bg-white p-4 rounded-3xl shadow-xs border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            {language === 'mr' ? 'व्यवसाय प्रकार:' : language === 'hi' ? 'व्यवसाय श्रेणी:' : 'Business Profile:'}
-          </span>
-          <span className="text-xs font-extrabold text-brand-900 bg-gray-100 px-2.5 py-1 rounded-lg">
-            {businessContext.icon} {businessContext.id}
-          </span>
+      {/* DEDICATED SELECTED BUSINESS BADGE & DETAILS */}
+      <div className="bg-white p-4.5 rounded-3xl shadow-xs border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all duration-200 hover:shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-brand-50 text-brand-900 border border-brand-100 flex items-center justify-center text-xl shrink-0 shadow-2xs">
+            {businessContext.icon || "🏪"}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                {language === 'mr' ? 'निवडलेला व्यवसाय' : language === 'hi' ? 'चयनित व्यवसाय' : 'Active Business'}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                {language === 'mr' ? 'सक्रिय' : language === 'hi' ? 'सक्रिय' : 'Active'}
+              </span>
+            </div>
+            <h3 className="font-extrabold text-base text-brand-900 mt-0.5">
+              {user?.business_name || (businessContext.name as any)?.[language] || businessContext.name?.en || businessContext.id}
+              <span className="text-xs font-semibold text-gray-500 ml-2">
+                • {businessContext.name?.[language] || businessContext.name?.en || businessContext.id}
+              </span>
+            </h3>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {['Tiffin', 'Tailoring', 'Bakery', 'Parlour', 'Handicrafts'].map((bKey) => {
-            const bItem = businessData[bKey];
-            const isSelected = businessContext.id === bKey;
-            return (
-              <button
-                key={bKey}
-                onClick={() => updateBusinessType(bKey)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  isSelected
-                    ? 'bg-brand-900 text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <span>{bItem.icon}</span>
-                <span>{bItem.name[language] || bItem.name.en}</span>
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2 self-start sm:self-auto bg-gray-50 px-3.5 py-2 rounded-2xl border border-gray-200/80">
+          <span className="text-xs font-bold text-gray-600">
+            {businessContext.categories?.sales?.[0] || 'Direct Sales'}
+          </span>
+          <span className="text-gray-300">|</span>
+          <span className="text-[11px] font-medium text-gray-500">
+            {user?.location || 'Local Store'}
+          </span>
         </div>
       </div>
 
@@ -390,27 +399,101 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title={loc.todaySales} amount={todayIncome} type="income" />
-          <StatCard title={loc.todayExpenses} amount={todayExpenses} type="expense" />
-          <StatCard title={loc.todayProfit} amount={todayProfit} type="profit" />
+          <StatCard 
+            title={loc.todaySales} 
+            amount={todayIncome} 
+            type="income" 
+            speechText={language === 'mr' ? `आजचे उत्पन्न ₹${todayIncome} आहे.` : language === 'hi' ? `आज की कुल आय ₹${todayIncome} है।` : `Today's income is ₹${todayIncome}.`}
+          />
+          <StatCard 
+            title={loc.todayExpenses} 
+            amount={todayExpenses} 
+            type="expense" 
+            speechText={language === 'mr' ? `आजचा एकूण खर्च ₹${todayExpenses} आहे.` : language === 'hi' ? `आज का कुल खर्च ₹${todayExpenses} है।` : `Today's total expenses are ₹${todayExpenses}.`}
+          />
+          <StatCard 
+            title={loc.todayProfit} 
+            amount={todayProfit} 
+            type="profit" 
+            speechText={language === 'mr' ? `आजचा निव्वळ नफा ₹${todayProfit} आहे.` : language === 'hi' ? `आज का शुद्ध लाभ ₹${todayProfit} है।` : `Today's net profit is ₹${todayProfit}.`}
+          />
+        </div>
+      </div>
+
+      {/* THIS WEEK'S METRICS (LAST 7 DAYS) */}
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <h2 className="font-extrabold text-xl text-brand-900 tracking-tight">
+              {language === 'mr' ? 'या आठवड्याचा हिशोब' : language === 'hi' ? 'इस सप्ताह का हिसाब' : "This Week's Numbers"}
+            </h2>
+            <span className="text-[10px] font-bold text-accent-700 bg-accent-50 px-2 py-0.5 rounded-md border border-accent-200">
+              Last 7 Days
+            </span>
+          </div>
+          <span className="text-xs text-gray-500 font-semibold bg-gray-100 px-3 py-1 rounded-full">
+            {language === 'mr' ? 'चालू ७ दिवस' : language === 'hi' ? 'पिछले 7 दिन' : 'Rolling 7 Days'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <StatCard 
+            title={language === 'mr' ? 'आठवडी विक्री' : language === 'hi' ? 'साप्ताहिक बिक्री' : 'Weekly Sales'} 
+            amount={thisWeekIncome} 
+            type="income" 
+            speechText={language === 'mr' ? `या आठवड्याची विक्री ₹${thisWeekIncome} आहे.` : language === 'hi' ? `इस सप्ताह की बिक्री ₹${thisWeekIncome} है।` : `This week's sales are ₹${thisWeekIncome}.`}
+          />
+          <StatCard 
+            title={language === 'mr' ? 'आठवडी खर्च' : language === 'hi' ? 'साप्ताहिक खर्च' : 'Weekly Expenses'} 
+            amount={thisWeekExpenses} 
+            type="expense" 
+            speechText={language === 'mr' ? `या आठवड्याचा खर्च ₹${thisWeekExpenses} आहे.` : language === 'hi' ? `इस सप्ताह का खर्च ₹${thisWeekExpenses} है।` : `This week's expenses are ₹${thisWeekExpenses}.`}
+          />
+          <StatCard 
+            title={language === 'mr' ? 'आठवडी नफा' : language === 'hi' ? 'साप्ताहिक लाभ' : 'Weekly Profit'} 
+            amount={thisWeekProfit} 
+            type="profit" 
+            speechText={language === 'mr' ? `या आठवड्याचा नफा ₹${thisWeekProfit} आहे.` : language === 'hi' ? `इस सप्ताह का शुद्ध लाभ ₹${thisWeekProfit} है।` : `This week's net profit is ₹${thisWeekProfit}.`}
+          />
         </div>
       </div>
 
       {/* THIS MONTH'S METRICS & PROFIT UNDERSTANDING EQUATION */}
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-extrabold text-xl text-brand-900 tracking-tight">
-            {loc.monthSales} & {loc.monthProfit}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-extrabold text-xl text-brand-900 tracking-tight">
+              {loc.monthSales} & {loc.monthProfit}
+            </h2>
+            <span className="text-[10px] font-bold text-brand-700 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
+              Calendar Month
+            </span>
+          </div>
           <span className="text-xs text-gray-500 font-semibold bg-gray-100 px-3 py-1 rounded-full">
             {new Date().toLocaleDateString(language === 'mr' ? 'mr-IN' : language === 'hi' ? 'hi-IN' : 'en-IN', { month: 'long', year: 'numeric' })}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <StatCard title={loc.monthSales} amount={thisMonthIncome} type="income" />
-          <StatCard title={loc.monthExpenses} amount={thisMonthExpenses} type="expense" />
-          <StatCard title={loc.monthProfit} amount={thisMonthProfit} type="profit" margin={profitMarginPercent} />
+          <StatCard 
+            title={loc.monthSales} 
+            amount={thisMonthIncome} 
+            type="income" 
+            speechText={language === 'mr' ? `चालू महिन्याची एकूण विक्री ₹${thisMonthIncome} आहे.` : language === 'hi' ? `इस महीने की कुल बिक्री ₹${thisMonthIncome} है।` : `This month's total sales are ₹${thisMonthIncome}.`}
+          />
+          <StatCard 
+            title={loc.monthExpenses} 
+            amount={thisMonthExpenses} 
+            type="expense" 
+            speechText={language === 'mr' ? `चालू महिन्याचा एकूण खर्च ₹${thisMonthExpenses} आहे.` : language === 'hi' ? `इस महीने का कुल खर्च ₹${thisMonthExpenses} है।` : `This month's total expenses are ₹${thisMonthExpenses}.`}
+          />
+          <StatCard 
+            title={loc.monthProfit} 
+            amount={thisMonthProfit} 
+            type="profit" 
+            margin={profitMarginPercent} 
+            speechText={language === 'mr' ? `चालू महिन्याचा नफा ₹${thisMonthProfit} असून नफा मार्जिन ${profitMarginPercent} टक्के आहे.` : language === 'hi' ? `इस महीने का लाभ ₹${thisMonthProfit} और मार्जिन ${profitMarginPercent} प्रतिशत है।` : `This month's net profit is ₹${thisMonthProfit} with ${profitMarginPercent}% margin.`}
+          />
         </div>
 
         {/* PROFIT UNDERSTANDING FORMULA WIDGET (Income − Expenses = Profit) */}
@@ -478,38 +561,100 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Dynamic Financial Insights */}
+        {/* Dynamic Financial Alerts & Smart Suggestions (Challenge 3) */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles size={18} className="text-accent-500" />
-              <h3 className="text-base font-extrabold text-brand-900">
-                {loc.insightsTitle}
-              </h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles size={18} className="text-accent-500" />
+                <h3 className="text-base font-extrabold text-brand-900">
+                  {language === 'mr' ? 'स्मार्ट आर्थिक सूचना व सल्ला' : language === 'hi' ? 'स्मार्ट वित्तीय अलर्ट और सलाह' : 'Smart Financial Alerts'}
+                </h3>
+              </div>
+              <span className="text-[10px] font-extrabold bg-accent-50 text-accent-700 px-2 py-0.5 rounded-full border border-accent-200">
+                AI Driven
+              </span>
             </div>
 
-            <div className="space-y-3">
-              <div className="p-3.5 rounded-2xl bg-green-50/70 border border-green-200/80 flex items-start gap-3">
-                <CheckCircle2 size={18} className="text-green-600 shrink-0 mt-0.5" />
-                <p className="text-xs font-semibold text-green-900 leading-relaxed">
-                  {loc.insightPositiveIncome}
-                </p>
-              </div>
+            {/* Dynamic Alerts List */}
+            {(() => {
+              // Load udhaar entries for alert engine
+              let udhaarList: UdhaarEntry[] = [];
+              try {
+                const storageKey = `khata_udhaar_${user?.email || user?.id || 'default'}`;
+                const saved = localStorage.getItem(storageKey);
+                if (saved) udhaarList = JSON.parse(saved);
+              } catch {}
 
-              <div className="p-3.5 rounded-2xl bg-surface-50 border border-gray-200 flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-accent-500 shrink-0 mt-1.5"></div>
-                <p className="text-xs font-semibold text-gray-700 leading-relaxed">
-                  <strong>{topExpenseCategory}:</strong> {loc.insightHighExpense}
-                </p>
-              </div>
-            </div>
+              const activeAlerts = generateDynamicAlerts(transactions, udhaarList);
+
+              if (activeAlerts.length === 0) {
+                return (
+                  <div className="p-4 rounded-2xl bg-green-50/70 border border-green-200/80 text-xs text-green-900 font-semibold">
+                    ✓ {language === 'mr' ? 'कोणताही आर्थिक धोका नाही. तुमचा हिशोब उत्तम चालला आहे.' : language === 'hi' ? 'कोई वित्तीय खतरा नहीं है। आपका हिसाब बहुत अच्छा चल रहा है।' : 'No financial risks detected. Operations are healthy.'}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {activeAlerts.slice(0, 2).map((alert: FinancialAlert) => {
+                    const isRed = alert.severity === 'red';
+                    const isAmber = alert.severity === 'amber';
+                    const isGreen = alert.severity === 'green';
+
+                    return (
+                      <div 
+                        key={alert.id}
+                        className={`p-3.5 rounded-2xl border flex items-start justify-between gap-3 ${
+                          isRed
+                            ? 'bg-rose-50/80 border-rose-200 text-rose-950'
+                            : isAmber
+                            ? 'bg-amber-50/80 border-amber-200 text-amber-950'
+                            : isGreen
+                            ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                            : 'bg-blue-50/80 border-blue-200 text-blue-950'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-extrabold text-xs">
+                              {alert.title[language] || alert.title.en}
+                            </span>
+                            {alert.amountOrMetric && (
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-white/70 border">
+                                {alert.amountOrMetric}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs opacity-90 leading-relaxed font-medium">
+                            {alert.description[language] || alert.description.en}
+                          </p>
+                          <p className="text-[11px] font-bold mt-1 text-accent-700">
+                            👉 {alert.recommendedAction[language] || alert.recommendedAction.en}
+                          </p>
+                        </div>
+
+                        {/* Speaker button to read alert aloud */}
+                        <AudioSpeakerButton
+                          text={alert.speechText[language] || alert.speechText.en}
+                          size="sm"
+                          className="shrink-0 mt-0.5"
+                          title={language === 'mr' ? 'अलर्ट ऐका' : language === 'hi' ? 'अलर्ट सुनें' : 'Listen to Alert'}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
           <button
             onClick={() => navigate('/app/insights')}
             className="mt-4 pt-4 border-t border-gray-100 text-xs font-bold text-accent-600 hover:text-accent-700 flex items-center justify-between cursor-pointer"
           >
-            <span>{loc.marginFinderTitle} & Category Split</span>
+            <span>{loc.marginFinderTitle} & {language === 'mr' ? 'खर्च विभागणी' : language === 'hi' ? 'खर्च विभाजन' : 'Expense Breakdown'}</span>
             <ChevronRight size={14} />
           </button>
         </div>
@@ -719,20 +864,41 @@ export default function Dashboard() {
   );
 }
 
-const StatCard = ({ title, amount, type, margin }: { title: string; amount: number; type: 'income' | 'expense' | 'profit'; margin?: number }) => {
+const StatCard = ({ 
+  title, 
+  amount, 
+  type, 
+  margin,
+  speechText 
+}: { 
+  title: string; 
+  amount: number; 
+  type: 'income' | 'expense' | 'profit'; 
+  margin?: number;
+  speechText?: string;
+}) => {
   return (
-    <div className={`p-5 rounded-3xl border shadow-xs transition ${
+    <div className={`p-5 rounded-3xl border shadow-xs transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md relative group cursor-default ${
       type === 'income' 
         ? 'bg-white border-gray-200' 
         : type === 'expense'
         ? 'bg-white border-gray-200'
         : 'bg-gradient-to-br from-brand-900 to-slate-900 text-white border-transparent shadow-md'
     }`}>
-      <span className={`text-xs font-bold uppercase tracking-wider block mb-2 ${
-        type === 'profit' ? 'text-accent-300' : 'text-gray-400'
-      }`}>
-        {title}
-      </span>
+      <div className="flex items-center justify-between mb-2">
+        <span className={`text-xs font-bold uppercase tracking-wider block ${
+          type === 'profit' ? 'text-accent-300' : 'text-gray-400'
+        }`}>
+          {title}
+        </span>
+        {speechText && (
+          <AudioSpeakerButton 
+            text={speechText} 
+            size="sm" 
+            className={type === 'profit' ? 'bg-white/10 text-white border-white/20 hover:bg-white/20' : ''}
+          />
+        )}
+      </div>
       <div className="flex items-baseline justify-between">
         <span className={`text-2xl md:text-3xl font-black ${
           type === 'income' 

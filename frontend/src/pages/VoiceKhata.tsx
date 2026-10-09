@@ -645,31 +645,55 @@ export default function VoiceKhata() {
   };
 
   const sampleVoicePhrases = [
-    {
-      lang: "हिंदी",
-      label: "30 डब्बे + खर्च ₹500",
-      text: "आज 30 डब्बे निकले। एक डब्बा ₹50? खर्च ₹500।"
-    },
-    {
-      lang: "मराठी",
-      label: "डबेवाला / टिफिन व्यवसाय",
-      text: "आज 20 डबे विकले, 70 रुपये प्रत्येकी. 600 रुपयांची भाजी आणि 450 रुपयांचा गहू आणला."
-    },
-    {
-      lang: "हिंदी",
-      label: "टिफिन सर्विस",
-      text: "आज 20 डबे विकले, 70 रुपये का एक. 600 रुपये की सब्जी और 450 रुपये का गेहूं लाया."
-    },
-    {
-      lang: "English",
-      label: "Tiffin Service",
-      text: "Sold 20 tiffins at 70 rupees each. Spent 600 on vegetables and 450 on wheat."
-    },
-    {
-      lang: "मराठी / हिंदी",
-      label: "शिलाई काम / Tailoring",
-      text: "3 ब्लाउज शिवले 500 रुपये प्रमाणे. 400 रुपयांचे कापड आणि 100 रुपयांचा धागा आणला."
-    }
+    ...(language === 'en' ? [
+      {
+        lang: "English",
+        label: "Tiffin Service",
+        text: "Sold 20 tiffins at 70 rupees each. Spent 600 on vegetables and 450 on wheat."
+      },
+      {
+        lang: "English",
+        label: "Tailoring Work",
+        text: "Tailored 3 blouses for 500 each. Spent 400 on cloth and 100 on thread."
+      },
+      {
+        lang: "English",
+        label: "General Store / Snacks",
+        text: "Earned 1400 from sales today. Spent 500 on groceries and 300 on oil."
+      }
+    ] : language === 'hi' ? [
+      {
+        lang: "हिंदी",
+        label: "टिफिन सर्विस",
+        text: "आज 20 डब्बे बिके, 70 रुपये का एक। 600 रुपये की सब्जी और 450 रुपये का गेहूं लाया।"
+      },
+      {
+        lang: "हिंदी",
+        label: "सिलाई काम",
+        text: "3 ब्लाउज सिले 500 रुपये के हिसाब से। 400 रुपये का कपड़ा और 100 रुपये का धागा खरीदा।"
+      },
+      {
+        lang: "हिंदी",
+        label: "दैनिक बिक्री व खर्च",
+        text: "आज 30 डब्बे निकले। एक डब्बा ₹50? खर्च ₹500।"
+      }
+    ] : [
+      {
+        lang: "मराठी",
+        label: "डबेवाला / टिफिन व्यवसाय",
+        text: "आज 20 डबे विकले, 70 रुपये प्रत्येकी. 600 रुपयांची भाजी आणि 450 रुपयांचा गहू आणला."
+      },
+      {
+        lang: "मराठी",
+        label: "शिलाई काम / Tailoring",
+        text: "3 ब्लाउज शिवले 500 रुपये प्रमाणे. 400 रुपयांचे कापड आणि 100 रुपयांचा धागा आणला."
+      },
+      {
+        lang: "मराठी",
+        label: "दुकान / नाश्ता केंद्र",
+        text: "आज 1400 रुपयांची विक्री झाली. 500 रुपयांचे दूध आणि 300 रुपयांचे तेल आणले."
+      }
+    ])
   ];
 
   const { totalIncome, totalExpenses, netProfit } = getConfirmationTotals();
@@ -935,17 +959,18 @@ export default function VoiceKhata() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={toggleSound}
-                    className={`p-2 rounded-xl transition ${isMuted ? 'bg-rose-500/30 text-rose-300' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                    title={isMuted ? "Sound Muted" : "Mute Sound"}
+                    className={`p-2 rounded-xl transition cursor-pointer ${isMuted ? 'bg-rose-500/30 text-rose-300' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                    title={isMuted ? (language === 'mr' ? "आवाज बंद आहे" : language === 'hi' ? "आवाज़ बंद है" : "Sound Muted") : (language === 'mr' ? "आवाज चालू आहे" : language === 'hi' ? "आवाज़ चालू है" : "Sound Active")}
                   >
                     {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                   </button>
                   <button
                     onClick={() => announceTotals(extractedData.transactions)}
-                    className="bg-white/10 hover:bg-white/20 p-2 rounded-xl text-white transition cursor-pointer"
-                    title="Speak summary aloud"
+                    className="bg-accent-500 hover:bg-accent-600 px-3 py-1.5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    title={language === 'mr' ? "हिशोब ऐका" : language === 'hi' ? "हिसाब सुनें" : "Listen to Summary"}
                   >
-                    <Volume2 size={18} />
+                    <Volume2 size={15} />
+                    <span>{language === 'mr' ? 'ऐका' : language === 'hi' ? 'सुनें' : 'Listen'}</span>
                   </button>
                 </div>
               </div>
@@ -1001,7 +1026,7 @@ export default function VoiceKhata() {
             <div className="mb-6 space-y-3">
               <div className="flex justify-between items-center px-1">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Itemized Entries ({extractedData.transactions.length})
+                  {language === 'mr' ? `नोंदवलेले घटक (${extractedData.transactions.length})` : language === 'hi' ? `दर्ज मदें (${extractedData.transactions.length})` : `Itemized Entries (${extractedData.transactions.length})`}
                 </span>
                 <div className="flex items-center gap-3">
                   <button
@@ -1014,7 +1039,7 @@ export default function VoiceKhata() {
                     onClick={() => setIsEditing(!isEditing)}
                     className="text-xs text-accent-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <Edit2 size={13} /> {isEditing ? "Done Editing" : loc.editBeforeSave}
+                    <Edit2 size={13} /> {isEditing ? (language === 'mr' ? "बदल पूर्ण" : language === 'hi' ? "संपादन पूर्ण" : "Done Editing") : loc.editBeforeSave}
                   </button>
                 </div>
               </div>
@@ -1036,7 +1061,9 @@ export default function VoiceKhata() {
                           <span className={`text-xs px-2 py-0.5 rounded font-extrabold uppercase ${
                             txn.type === 'sale' ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'
                           }`}>
-                            {txn.type === 'sale' ? '+ Income' : '- Expense'}
+                            {txn.type === 'sale' 
+                              ? (language === 'mr' ? '+ मिळकत' : language === 'hi' ? '+ आमदनी' : '+ Income') 
+                              : (language === 'mr' ? '- खर्च' : language === 'hi' ? '- खर्च' : '- Expense')}
                           </span>
                           <span className="text-xs text-gray-400 font-medium">{txn.category || 'General'}</span>
                         </div>

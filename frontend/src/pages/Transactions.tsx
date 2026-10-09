@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext, Transaction } from '../context/AppContext';
 import { Plus, Minus, Mic, FileText, Search, Trash2, Edit, X, CheckCircle2, ArrowUpDown, Calendar } from 'lucide-react';
+import { AudioSpeakerButton } from '../components/AudioSpeakerButton';
 
 export default function Transactions() {
   const { transactions, deleteTransaction, addTransaction, loc, language } = useAppContext();
@@ -214,7 +215,20 @@ export default function Transactions() {
                     {t.type === 'sale' ? '+' : '-'}₹{Number(t.amount).toLocaleString('en-IN')}
                   </span>
 
-                  <div className="flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    {/* Speak Transaction Audio Button */}
+                    <AudioSpeakerButton
+                      text={
+                        language === 'mr'
+                          ? `${t.date} रोजीचा ${t.type === 'sale' ? 'विक्री उत्पन्न' : 'खर्च'} ₹${t.amount}, ${t.item || t.category}.`
+                          : language === 'hi'
+                          ? `${t.date} को ${t.type === 'sale' ? 'बिक्री आय' : 'खर्च'} ₹${t.amount}, ${t.item || t.category}।`
+                          : `${t.type === 'sale' ? 'Sale income' : 'Expense'} of ₹${t.amount} for ${t.item || t.category} on ${t.date}.`
+                      }
+                      size="sm"
+                      title={language === 'mr' ? 'नोंद ऐका' : language === 'hi' ? 'लेन-देन सुनें' : 'Listen to Transaction'}
+                    />
+
                     <button 
                       onClick={() => startEdit(t)}
                       className="p-2 text-gray-400 hover:text-brand-900 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer" 
@@ -389,7 +403,7 @@ export default function Transactions() {
               <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3">
                 <label className="block text-xs font-bold text-amber-900 mb-1 flex items-center gap-1.5">
                   <Calendar size={14} className="text-amber-700" />
-                  {loc.entryDate || "Transaction Date (मागील तारीखही निवडू शकता)"}
+                  {loc.entryDate} <span className="text-[11px] font-normal text-amber-800">{language === 'mr' ? '(मागील तारीखही निवडू शकता)' : language === 'hi' ? '(पिछली तारीख भी चुन सकते हैं)' : '(Past dates allowed)'}</span>
                 </label>
                 <input
                   type="date"
@@ -409,7 +423,9 @@ export default function Transactions() {
                 <input
                   type="text"
                   required
-                  placeholder={newType === 'sale' ? (language === 'mr' ? 'उदा. २० डबे विक्री' : 'उदा. 20 टिफिन बिक्री') : (language === 'mr' ? 'उदा. भाजीपाला खरेदी' : 'उदा. सब्जी खरीदारी')}
+                  placeholder={newType === 'sale' 
+                    ? (language === 'mr' ? 'उदा. २० डबे विक्री' : language === 'hi' ? 'उदा. 20 टिफिन बिक्री' : 'e.g. Sold 20 tiffins') 
+                    : (language === 'mr' ? 'उदा. भाजीपाला खरेदी' : language === 'hi' ? 'उदा. सब्जी खरीदारी' : 'e.g. Bought vegetables')}
                   value={newItem}
                   onChange={(e) => setNewItem(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-sm font-semibold outline-none focus:bg-white focus:border-brand-500"

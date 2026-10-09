@@ -11,6 +11,10 @@ from sqlalchemy.orm import Session
 
 from database import get_db, User, BusinessProfile, Transaction, Base, engine
 from auth import verify_password, get_password_hash, create_access_token, decode_access_token
+from parser import rule_based_extract, parse_udhaar_speech
+from chatbot_engine import answer_financial_query, detect_language
+from whatsapp_service import send_whatsapp_message
+
 
 load_dotenv()
 app = FastAPI(title="Khata se Credit Tak API")
@@ -61,6 +65,27 @@ class SpeechRequest(BaseModel):
     text: str
     business_type: str
     language: str
+
+class ChatRequest(BaseModel):
+    query: str
+    language: Optional[str] = "en"
+    context: Optional[dict] = None
+    history: Optional[List[dict]] = None
+
+class WhatsAppNotificationRequest(BaseModel):
+    phone: str
+    type: str
+    customer_name: str
+    amount: float
+    previous_balance: float
+    new_balance: float
+    payment_method: Optional[str] = "cash"
+    payment_status: Optional[str] = "verified"
+    receipt_id: Optional[str] = None
+    shop_name: Optional[str] = "Khata Se Credit Tak Store"
+    language: Optional[str] = "mr"
+
+
 
 # --- Auth Dependency ---
 def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
@@ -265,6 +290,71 @@ def parse_speech(req: SpeechRequest):
         ]
     }
 
+@app.post("/api/speech/parse-udhaar")
+def parse_udhaar_endpoint(req: SpeechRequest):
+    parsed = parse_udhaar_speech(req.text)
+    if parsed:
+        return parsed
+    return {
+        "customer_name": "नवीन ग्राहक (New Customer)",
+        "amount": 0,
+        "type": "credit",
+        "date": datetime.date.today().isoformat(),
+        "raw_transcript": req.text
+    }
+
+@app.post("/api/chat/ask")
+def chat_ask(req: ChatRequest):
+    context = req.context or {}
+    result = answer_financial_query(
+        query=req.query,
+        language=req.language or "en",
+        context=context,
+        history=req.history
+    )
+    
+    if GEMINI_API_KEY:
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            sys_prompt = f"""
+            You are a helpful, respectful multilingual financial assistant for an Indian small business owner in 'Khata Se Credit Tak'.
+            User asked: "{req.query}"
+            Target language code: "{result['language']}" (mr = Marathi, hi = Hindi, en = English).
+            
+            Exact verified financial figures and ground truth calculated by the ledger:
+            "{result['answer']}"
+            
+            Instructions:
+            - Respond in the detected language ({result['language']}). If Marathi, use clear natural Marathi. If Hindi, use natural Hindi. If English, clear simple English.
+            - Keep the response concise, encouraging, and accurate.
+            - You MUST strictly preserve all numbers, rupees (₹), percentages, and customer names exactly as given in the verified ground truth. Do not invent any numbers.
+            """
+            ai_res = model.generate_content(sys_prompt)
+            if ai_res and ai_res.text and len(ai_res.text.strip()) > 10:
+                result["answer"] = ai_res.text.strip()
+        except Exception:
+            pass
+
+    return result
+
+@app.post("/api/whatsapp/send-notification")
+def send_whatsapp_notification(req: WhatsAppNotificationRequest):
+    return send_whatsapp_message(
+        phone=req.phone,
+        msg_type=req.type,
+        customer_name=req.customer_name,
+        amount=req.amount,
+        previous_balance=req.previous_balance,
+        new_balance=req.new_balance,
+        payment_method=req.payment_method,
+        payment_status=req.payment_status,
+        receipt_id=req.receipt_id,
+        shop_name=req.shop_name or "Khata Se Credit Tak Store",
+        language=req.language or "mr"
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+

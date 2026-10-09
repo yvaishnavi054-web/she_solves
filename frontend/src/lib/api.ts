@@ -63,5 +63,37 @@ export const api = {
     });
     if (!res.ok) throw new Error("Failed to parse speech");
     return res.json();
+  },
+  askChat: async (data: { query: string; language?: string; context?: any; history?: any[] }) => {
+    const res = await fetch(`${API_URL}/api/chat/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to get chat response");
+    return res.json();
+  },
+  sendWhatsAppNotification: async (data: {
+    phone: string;
+    type: 'new_udhar' | 'payment_receipt';
+    customer_name: string;
+    amount: number;
+    previous_balance: number;
+    new_balance: number;
+    payment_method?: 'cash' | 'upi';
+    payment_status?: string;
+    receipt_id?: string;
+    shop_name?: string;
+    language?: string;
+  }) => {
+    const res = await fetch(`${API_URL}/api/whatsapp/send-notification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to send WhatsApp notification");
+    return res.json();
   }
 };
+
+

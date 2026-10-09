@@ -2,14 +2,15 @@
 > **"Speak. Understand. Grow."** — *From daily spoken records to formal financial credit readiness.*  
 > **Built by Team RootAccess · SHE SOLVES 3.0 Hackathon**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://khata-se-credit-tak.vercel.app)
-[![Backend API](https://img.shields.io/badge/Backend%20API-Render-46E3B7?style=for-the-badge&logo=render)](https://khata-se-credit-tak-api.onrender.com)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/yvaishnavi054-web/khata-se-credit-tak)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/yvaishnavi054-web/she_solves)
+[![Frontend](https://img.shields.io/badge/Frontend-React_19_+_Vite_8-61DAFB?style=for-the-badge&logo=react)](https://github.com/yvaishnavi054-web/she_solves)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI_+_Python-009688?style=for-the-badge&logo=fastapi)](https://github.com/yvaishnavi054-web/she_solves)
+[![AI Engine](https://img.shields.io/badge/AI-Gemini_1.5_Flash-4285F4?style=for-the-badge&logo=google)](https://github.com/yvaishnavi054-web/she_solves)
 
-### 🌐 Live Deployment Links
-* **Live Web Prototype (Vercel):** [https://khata-se-credit-tak.vercel.app](https://khata-se-credit-tak.vercel.app)
-* **Live Backend API (Render):** [https://khata-se-credit-tak-api.onrender.com](https://khata-se-credit-tak-api.onrender.com)
-* **1-Click Evaluation / Demo Mode:** Click **"Explore Demo Account (Meena Tai)"** on the landing page for immediate walkthrough with 90-day realistic financial data.
+### 🌐 Project Repository
+* **GitHub Repository:** [https://github.com/yvaishnavi054-web/she_solves](https://github.com/yvaishnavi054-web/she_solves)
+* **Frontend:** React 19 + TypeScript + Vite 8 + Tailwind CSS v4 + Web Speech API (STT/TTS)
+* **Backend:** FastAPI + Python + SQLite + SQLAlchemy + Google Gemini 1.5 Flash + Meta WhatsApp Cloud API
 
 ---
 
